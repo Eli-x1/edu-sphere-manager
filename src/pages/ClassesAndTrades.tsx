@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 
@@ -14,6 +15,7 @@ const LEVELS = ["S1", "S2", "S3", "S4", "S5", "S6", "L3", "L4", "L5"];
 const ClassesAndTrades = () => {
   const { school, userRole } = useSchool();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [classes, setClasses] = useState<any[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
   const [newClassLevel, setNewClassLevel] = useState("");
@@ -80,7 +82,12 @@ const ClassesAndTrades = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Classes & Trades</h1>
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-2xl font-bold">Classes & Trades</h1>
+      </div>
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Trades card first — trades must exist before creating classes */}
         <Card>
