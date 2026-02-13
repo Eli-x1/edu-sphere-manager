@@ -64,6 +64,7 @@ export type Database = {
           description: string | null
           id: string
           mistake_date: string
+          record_type: string
           recorded_by: string
           school_id: string
           student_id: string
@@ -75,6 +76,7 @@ export type Database = {
           description?: string | null
           id?: string
           mistake_date?: string
+          record_type?: string
           recorded_by: string
           school_id: string
           student_id: string
@@ -86,6 +88,7 @@ export type Database = {
           description?: string | null
           id?: string
           mistake_date?: string
+          record_type?: string
           recorded_by?: string
           school_id?: string
           student_id?: string
@@ -193,6 +196,7 @@ export type Database = {
           parent_name: string | null
           parent_phone: string | null
           registration_number: string
+          responsibility: string | null
           school_id: string
           status: string
           trade_id: string | null
@@ -214,6 +218,7 @@ export type Database = {
           parent_name?: string | null
           parent_phone?: string | null
           registration_number: string
+          responsibility?: string | null
           school_id: string
           status?: string
           trade_id?: string | null
@@ -235,6 +240,7 @@ export type Database = {
           parent_name?: string | null
           parent_phone?: string | null
           registration_number?: string
+          responsibility?: string | null
           school_id?: string
           status?: string
           trade_id?: string | null
