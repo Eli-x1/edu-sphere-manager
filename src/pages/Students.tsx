@@ -72,7 +72,7 @@ const Students = () => {
                     <TableCell>{(s.trades as any)?.name ?? "—"}</TableCell>
                     <TableCell>
                       {s.responsibility ? (
-                        <Badge variant="outline" className="text-xs">{s.responsibility}</Badge>
+                        <Badge className="bg-green-600 text-white hover:bg-green-700 text-xs">{s.responsibility}</Badge>
                       ) : "—"}
                     </TableCell>
                     <TableCell>
