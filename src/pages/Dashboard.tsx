@@ -110,6 +110,31 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Announcements from Platform Admin */}
+      {announcements.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Megaphone className="h-4 w-4 text-primary" />
+              Announcements
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {announcements.map((a) => (
+                <div key={a.id} className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                  <div className="flex items-start justify-between">
+                    <p className="text-sm font-semibold">{a.title}</p>
+                    <Badge variant="outline" className="text-xs">{new Date(a.created_at).toLocaleDateString()}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">{a.message}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Discipline */}
       <Card>
         <CardHeader>
