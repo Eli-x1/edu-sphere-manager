@@ -13,11 +13,12 @@ const Dashboard = () => {
   const isTeacherOrAbove = isAdmin || userRole?.role === "teacher";
   const [stats, setStats] = useState({ students: 0, classes: 0, disciplines: 0 });
   const [recentDiscipline, setRecentDiscipline] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
 
   useEffect(() => {
     if (!school) return;
     const fetchStats = async () => {
-      const [studentsRes, classesRes, discRes, recentRes] = await Promise.all([
+      const [studentsRes, classesRes, discRes, recentRes, announcementsRes] = await Promise.all([
         supabase.from("students").select("id", { count: "exact", head: true }).eq("school_id", school.id),
         supabase.from("classes").select("id", { count: "exact", head: true }).eq("school_id", school.id),
         supabase.from("discipline_records").select("id", { count: "exact", head: true }).eq("school_id", school.id),
