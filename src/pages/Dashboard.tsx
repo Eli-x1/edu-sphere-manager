@@ -5,7 +5,8 @@ import { useSchool } from "@/contexts/SchoolContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, BookOpen, AlertTriangle, UserPlus, Search, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Users, BookOpen, AlertTriangle, UserPlus, Search, Shield, Megaphone } from "lucide-react";
 
 const Dashboard = () => {
   const { school, userRole } = useSchool();
