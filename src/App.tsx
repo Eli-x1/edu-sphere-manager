@@ -20,6 +20,7 @@ import Discipline from "./pages/Discipline";
 import SearchStudents from "./pages/SearchStudents";
 import TeamManagement from "./pages/TeamManagement";
 import PlatformAdmin from "./pages/PlatformAdmin";
+import Messages from "./pages/Messages";
 import DashboardLayout from "./components/DashboardLayout";
 import NotFound from "./pages/NotFound";
 
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="/dashboard/discipline" element={<ProtectedRoute><SchoolRoute><Discipline /></SchoolRoute></ProtectedRoute>} />
               <Route path="/dashboard/search" element={<ProtectedRoute><SchoolRoute><SearchStudents /></SchoolRoute></ProtectedRoute>} />
               <Route path="/dashboard/team" element={<ProtectedRoute><SchoolRoute><TeamManagement /></SchoolRoute></ProtectedRoute>} />
+              <Route path="/dashboard/messages" element={<ProtectedRoute><SchoolRoute><Messages /></SchoolRoute></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </SchoolProvider>
