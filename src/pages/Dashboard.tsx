@@ -18,18 +18,24 @@ const Dashboard = () => {
   useEffect(() => {
     if (!school) return;
     const fetchStats = async () => {
-      const [studentsRes, classesRes, discRes, recentRes, announcementsRes] = await Promise.all([
+      const [studentsRes, classesRes, discRes, recentRes] = await Promise.all([
         supabase.from("students").select("id", { count: "exact", head: true }).eq("school_id", school.id),
         supabase.from("classes").select("id", { count: "exact", head: true }).eq("school_id", school.id),
         supabase.from("discipline_records").select("id", { count: "exact", head: true }).eq("school_id", school.id),
         supabase.from("discipline_records").select("*, students(full_name)").eq("school_id", school.id).order("created_at", { ascending: false }).limit(5),
       ]);
+      const { data: announcementsData } = await supabase
+        .from("announcements")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5);
       setStats({
         students: studentsRes.count ?? 0,
         classes: classesRes.count ?? 0,
         disciplines: discRes.count ?? 0,
       });
       setRecentDiscipline(recentRes.data ?? []);
+      setAnnouncements(announcementsData ?? []);
     };
     fetchStats();
   }, [school]);
