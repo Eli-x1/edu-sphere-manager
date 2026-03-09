@@ -24,10 +24,7 @@ const Subjects = () => {
   const [abbreviation, setAbbreviation] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [assigningSubject, setAssigningSubject] = useState<any>(null);
-  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
-  const [savingAssignment, setSavingAssignment] = useState(false);
+  const [formClassIds, setFormClassIds] = useState<string[]>([]);
 
   const fetchData = async () => {
     if (!school) return;
