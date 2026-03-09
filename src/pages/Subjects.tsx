@@ -7,32 +7,48 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, BookOpen } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const Subjects = () => {
   const { school } = useSchool();
   const { toast } = useToast();
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [classSubjects, setClassSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [abbreviation, setAbbreviation] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assigningSubject, setAssigningSubject] = useState<any>(null);
+  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+  const [savingAssignment, setSavingAssignment] = useState(false);
 
-  const fetchSubjects = async () => {
+  const fetchData = async () => {
     if (!school) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("subjects")
-      .select("*")
-      .eq("school_id", school.id)
-      .order("name");
-    setSubjects(data ?? []);
+    const [subRes, clsRes, csRes] = await Promise.all([
+      supabase.from("subjects").select("*").eq("school_id", school.id).order("name"),
+      supabase.from("classes").select("id, name, level").eq("school_id", school.id).order("name"),
+      supabase.from("class_subjects").select("*").eq("school_id", school.id),
+    ]);
+    setSubjects(subRes.data ?? []);
+    setClasses(clsRes.data ?? []);
+    setClassSubjects(csRes.data ?? []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchSubjects(); }, [school]);
+  useEffect(() => { fetchData(); }, [school]);
+
+  const getClassesForSubject = (subjectId: string) => {
+    const classIds = classSubjects.filter(cs => cs.subject_id === subjectId).map(cs => cs.class_id);
+    return classes.filter(c => classIds.includes(c.id));
+  };
 
   const handleSave = async () => {
     if (!school || !name.trim()) return;
@@ -51,7 +67,7 @@ const Subjects = () => {
     setName("");
     setAbbreviation("");
     setSaving(false);
-    fetchSubjects();
+    fetchData();
   };
 
   const handleEdit = (s: any) => {
@@ -63,14 +79,66 @@ const Subjects = () => {
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("subjects").delete().eq("id", id);
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { toast({ title: "Subject deleted" }); fetchSubjects(); }
+    else { toast({ title: "Subject deleted" }); fetchData(); }
+  };
+
+  const openAssignDialog = (subject: any) => {
+    setAssigningSubject(subject);
+    const currentClassIds = classSubjects.filter(cs => cs.subject_id === subject.id).map(cs => cs.class_id);
+    setSelectedClassIds(currentClassIds);
+    setAssignDialogOpen(true);
+  };
+
+  const handleSaveAssignments = async () => {
+    if (!school || !assigningSubject) return;
+    setSavingAssignment(true);
+
+    const currentClassIds = classSubjects.filter(cs => cs.subject_id === assigningSubject.id).map(cs => cs.class_id);
+    const toAdd = selectedClassIds.filter(id => !currentClassIds.includes(id));
+    const toRemove = currentClassIds.filter(id => !selectedClassIds.includes(id));
+
+    const promises: Promise<any>[] = [];
+
+    if (toAdd.length > 0) {
+      promises.push(
+        supabase.from("class_subjects").insert(
+          toAdd.map(classId => ({ class_id: classId, subject_id: assigningSubject.id, school_id: school.id }))
+        )
+      );
+    }
+
+    for (const classId of toRemove) {
+      promises.push(
+        supabase.from("class_subjects").delete()
+          .eq("class_id", classId)
+          .eq("subject_id", assigningSubject.id)
+      );
+    }
+
+    const results = await Promise.all(promises);
+    const hasError = results.some(r => r.error);
+    if (hasError) {
+      toast({ title: "Error saving assignments", variant: "destructive" });
+    } else {
+      toast({ title: "Class assignments updated" });
+    }
+
+    setSavingAssignment(false);
+    setAssignDialogOpen(false);
+    fetchData();
+  };
+
+  const toggleClass = (classId: string) => {
+    setSelectedClassIds(prev =>
+      prev.includes(classId) ? prev.filter(id => id !== classId) : [...prev, classId]
+    );
   };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Subjects</h1>
-        <p className="text-sm text-muted-foreground">Manage subjects for your school</p>
+        <p className="text-sm text-muted-foreground">Manage subjects and assign them to classes</p>
       </div>
 
       <Card>
@@ -108,41 +176,91 @@ const Subjects = () => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Abbreviation</TableHead>
+                  <TableHead>Assigned Classes</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {subjects.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell>{s.abbreviation || "—"}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(s)}><Pencil className="h-4 w-4" /></Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete {s.name}?</AlertDialogTitle>
-                              <AlertDialogDescription>This will also delete all grades for this subject.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(s.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {subjects.map((s) => {
+                  const assignedClasses = getClassesForSubject(s.id);
+                  return (
+                    <TableRow key={s.id}>
+                      <TableCell className="font-medium">{s.name}</TableCell>
+                      <TableCell>{s.abbreviation || "—"}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {assignedClasses.length === 0 ? (
+                            <span className="text-sm text-muted-foreground">None</span>
+                          ) : (
+                            assignedClasses.map(c => (
+                              <Badge key={c.id} variant="secondary" className="text-xs">{c.name}</Badge>
+                            ))
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openAssignDialog(s)} title="Assign to classes">
+                            <BookOpen className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(s)}><Pencil className="h-4 w-4" /></Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete {s.name}?</AlertDialogTitle>
+                                <AlertDialogDescription>This will also delete all grades and class assignments for this subject.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(s.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign "{assigningSubject?.name}" to Classes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {classes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No classes found. Create classes first.</p>
+            ) : (
+              classes.map(c => (
+                <div key={c.id} className="flex items-center gap-3">
+                  <Checkbox
+                    id={`class-${c.id}`}
+                    checked={selectedClassIds.includes(c.id)}
+                    onCheckedChange={() => toggleClass(c.id)}
+                  />
+                  <label htmlFor={`class-${c.id}`} className="text-sm font-medium cursor-pointer">
+                    {c.name}
+                  </label>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveAssignments} disabled={savingAssignment}>
+              {savingAssignment ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
