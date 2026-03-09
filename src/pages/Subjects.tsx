@@ -97,11 +97,11 @@ const Subjects = () => {
     const toAdd = selectedClassIds.filter(id => !currentClassIds.includes(id));
     const toRemove = currentClassIds.filter(id => !selectedClassIds.includes(id));
 
-    const promises: Promise<any>[] = [];
+    const promises: any[] = [];
 
     if (toAdd.length > 0) {
       promises.push(
-        supabase.from("class_subjects").insert(
+        supabase.from("class_subjects" as any).insert(
           toAdd.map(classId => ({ class_id: classId, subject_id: assigningSubject.id, school_id: school.id }))
         )
       );
@@ -109,10 +109,9 @@ const Subjects = () => {
 
     for (const classId of toRemove) {
       promises.push(
-        supabase.from("class_subjects").delete()
+        supabase.from("class_subjects" as any).delete()
           .eq("class_id", classId)
           .eq("subject_id", assigningSubject.id)
-          .then()
       );
     }
 
