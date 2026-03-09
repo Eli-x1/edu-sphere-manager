@@ -35,7 +35,7 @@ const Subjects = () => {
     const [subRes, clsRes, csRes] = await Promise.all([
       supabase.from("subjects").select("*").eq("school_id", school.id).order("name"),
       supabase.from("classes").select("id, name, level").eq("school_id", school.id).order("name"),
-      supabase.from("class_subjects").select("*").eq("school_id", school.id),
+      supabase.from("class_subjects" as any).select("*").eq("school_id", school.id),
     ]);
     setSubjects(subRes.data ?? []);
     setClasses(clsRes.data ?? []);
