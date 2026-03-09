@@ -10,8 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Pencil, BookOpen } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Trash2, Pencil } from "lucide-react";
 
 const Subjects = () => {
   const { school } = useSchool();
@@ -24,10 +23,7 @@ const Subjects = () => {
   const [abbreviation, setAbbreviation] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [assigningSubject, setAssigningSubject] = useState<any>(null);
-  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
-  const [savingAssignment, setSavingAssignment] = useState(false);
+  const [formClassIds, setFormClassIds] = useState<string[]>([]);
 
   const fetchData = async () => {
     if (!school) return;
@@ -39,7 +35,7 @@ const Subjects = () => {
     ]);
     setSubjects(subRes.data ?? []);
     setClasses(clsRes.data ?? []);
-    setClassSubjects(csRes.data ?? []);
+    setClassSubjects((csRes.data as any[]) ?? []);
     setLoading(false);
   };
 
@@ -50,22 +46,52 @@ const Subjects = () => {
     return classes.filter(c => classIds.includes(c.id));
   };
 
+  const resetForm = () => {
+    setName("");
+    setAbbreviation("");
+    setFormClassIds([]);
+    setEditingId(null);
+  };
+
   const handleSave = async () => {
     if (!school || !name.trim()) return;
     setSaving(true);
 
+    let subjectId = editingId;
+
     if (editingId) {
       const { error } = await supabase.from("subjects").update({ name: name.trim(), abbreviation: abbreviation.trim() || null }).eq("id", editingId);
-      if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-      else { toast({ title: "Subject updated" }); setEditingId(null); }
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
     } else {
-      const { error } = await supabase.from("subjects").insert({ school_id: school.id, name: name.trim(), abbreviation: abbreviation.trim() || null });
-      if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-      else toast({ title: "Subject added" });
+      const { data, error } = await supabase.from("subjects").insert({ school_id: school.id, name: name.trim(), abbreviation: abbreviation.trim() || null }).select("id").single();
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
+      subjectId = data.id;
     }
 
-    setName("");
-    setAbbreviation("");
+    // Sync class assignments
+    const currentClassIds = classSubjects.filter(cs => cs.subject_id === subjectId).map(cs => cs.class_id);
+    const toAdd = formClassIds.filter(id => !currentClassIds.includes(id));
+    const toRemove = currentClassIds.filter(id => !formClassIds.includes(id));
+
+    const promises: any[] = [];
+    if (toAdd.length > 0) {
+      promises.push(
+        supabase.from("class_subjects" as any).insert(
+          toAdd.map(classId => ({ class_id: classId, subject_id: subjectId, school_id: school.id }))
+        )
+      );
+    }
+    for (const classId of toRemove) {
+      promises.push(
+        supabase.from("class_subjects" as any).delete()
+          .eq("class_id", classId)
+          .eq("subject_id", subjectId)
+      );
+    }
+    await Promise.all(promises);
+
+    toast({ title: editingId ? "Subject updated" : "Subject added" });
+    resetForm();
     setSaving(false);
     fetchData();
   };
@@ -74,6 +100,8 @@ const Subjects = () => {
     setEditingId(s.id);
     setName(s.name);
     setAbbreviation(s.abbreviation || "");
+    const assignedIds = classSubjects.filter(cs => cs.subject_id === s.id).map(cs => cs.class_id);
+    setFormClassIds(assignedIds);
   };
 
   const handleDelete = async (id: string) => {
@@ -82,54 +110,8 @@ const Subjects = () => {
     else { toast({ title: "Subject deleted" }); fetchData(); }
   };
 
-  const openAssignDialog = (subject: any) => {
-    setAssigningSubject(subject);
-    const currentClassIds = classSubjects.filter(cs => cs.subject_id === subject.id).map(cs => cs.class_id);
-    setSelectedClassIds(currentClassIds);
-    setAssignDialogOpen(true);
-  };
-
-  const handleSaveAssignments = async () => {
-    if (!school || !assigningSubject) return;
-    setSavingAssignment(true);
-
-    const currentClassIds = classSubjects.filter(cs => cs.subject_id === assigningSubject.id).map(cs => cs.class_id);
-    const toAdd = selectedClassIds.filter(id => !currentClassIds.includes(id));
-    const toRemove = currentClassIds.filter(id => !selectedClassIds.includes(id));
-
-    const promises: any[] = [];
-
-    if (toAdd.length > 0) {
-      promises.push(
-        supabase.from("class_subjects" as any).insert(
-          toAdd.map(classId => ({ class_id: classId, subject_id: assigningSubject.id, school_id: school.id }))
-        )
-      );
-    }
-
-    for (const classId of toRemove) {
-      promises.push(
-        supabase.from("class_subjects" as any).delete()
-          .eq("class_id", classId)
-          .eq("subject_id", assigningSubject.id)
-      );
-    }
-
-    const results = await Promise.all(promises);
-    const hasError = results.some(r => r.error);
-    if (hasError) {
-      toast({ title: "Error saving assignments", variant: "destructive" });
-    } else {
-      toast({ title: "Class assignments updated" });
-    }
-
-    setSavingAssignment(false);
-    setAssignDialogOpen(false);
-    fetchData();
-  };
-
-  const toggleClass = (classId: string) => {
-    setSelectedClassIds(prev =>
+  const toggleFormClass = (classId: string) => {
+    setFormClassIds(prev =>
       prev.includes(classId) ? prev.filter(id => id !== classId) : [...prev, classId]
     );
   };
@@ -143,7 +125,7 @@ const Subjects = () => {
 
       <Card>
         <CardHeader><CardTitle className="text-base">{editingId ? "Edit Subject" : "Add Subject"}</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 space-y-1">
               <Label>Name *</Label>
@@ -153,14 +135,33 @@ const Subjects = () => {
               <Label>Abbreviation</Label>
               <Input value={abbreviation} onChange={(e) => setAbbreviation(e.target.value)} placeholder="e.g. MATH" />
             </div>
-            <div className="flex items-end gap-2">
-              <Button onClick={handleSave} disabled={saving || !name.trim()}>
-                <Plus className="h-4 w-4 mr-1" />{editingId ? "Update" : "Add"}
-              </Button>
-              {editingId && (
-                <Button variant="outline" onClick={() => { setEditingId(null); setName(""); setAbbreviation(""); }}>Cancel</Button>
-              )}
+          </div>
+
+          {classes.length > 0 && (
+            <div className="space-y-2">
+              <Label>Assign to Classes</Label>
+              <div className="flex flex-wrap gap-3">
+                {classes.map(c => (
+                  <div key={c.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`form-class-${c.id}`}
+                      checked={formClassIds.includes(c.id)}
+                      onCheckedChange={() => toggleFormClass(c.id)}
+                    />
+                    <label htmlFor={`form-class-${c.id}`} className="text-sm cursor-pointer">{c.name}</label>
+                  </div>
+                ))}
+              </div>
             </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={saving || !name.trim()}>
+              <Plus className="h-4 w-4 mr-1" />{editingId ? "Update" : "Add"}
+            </Button>
+            {editingId && (
+              <Button variant="outline" onClick={resetForm}>Cancel</Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -200,9 +201,6 @@ const Subjects = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => openAssignDialog(s)} title="Assign to classes">
-                            <BookOpen className="h-4 w-4" />
-                          </Button>
                           <Button variant="ghost" size="sm" onClick={() => handleEdit(s)}><Pencil className="h-4 w-4" /></Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -229,38 +227,6 @@ const Subjects = () => {
           )}
         </CardContent>
       </Card>
-
-      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign "{assigningSubject?.name}" to Classes</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 max-h-80 overflow-y-auto">
-            {classes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No classes found. Create classes first.</p>
-            ) : (
-              classes.map(c => (
-                <div key={c.id} className="flex items-center gap-3">
-                  <Checkbox
-                    id={`class-${c.id}`}
-                    checked={selectedClassIds.includes(c.id)}
-                    onCheckedChange={() => toggleClass(c.id)}
-                  />
-                  <label htmlFor={`class-${c.id}`} className="text-sm font-medium cursor-pointer">
-                    {c.name}
-                  </label>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveAssignments} disabled={savingAssignment}>
-              {savingAssignment ? "Saving..." : "Save"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
