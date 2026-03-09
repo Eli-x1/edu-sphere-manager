@@ -61,7 +61,7 @@ const GradeEntry = () => {
     }
     const loadClassSubjects = async () => {
       const { data } = await supabase
-        .from("class_subjects")
+        .from("class_subjects" as any)
         .select("subject_id")
         .eq("class_id", selectedClassId)
         .eq("school_id", school.id);
