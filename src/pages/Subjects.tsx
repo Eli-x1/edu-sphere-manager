@@ -112,6 +112,7 @@ const Subjects = () => {
         supabase.from("class_subjects").delete()
           .eq("class_id", classId)
           .eq("subject_id", assigningSubject.id)
+          .then()
       );
     }
 
