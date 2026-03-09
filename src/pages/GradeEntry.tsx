@@ -65,7 +65,7 @@ const GradeEntry = () => {
         .select("subject_id")
         .eq("class_id", selectedClassId)
         .eq("school_id", school.id);
-      const subjectIds = (data ?? []).map(cs => cs.subject_id);
+      const subjectIds = ((data as any[]) ?? []).map((cs: any) => cs.subject_id);
       if (subjectIds.length > 0) {
         setSubjects(allSubjects.filter(s => subjectIds.includes(s.id)));
       } else {
