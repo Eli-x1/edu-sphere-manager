@@ -115,10 +115,7 @@ const GradeEntry = () => {
       const numVal = parseFloat(val);
       if (isNaN(numVal) || numVal < 0 || numVal > 100) continue;
 
-      const existing = existingGrades[student.id];
-      const row: any = { school_id: school.id, student_id: student.id, subject_id: selectedSubjectId, term: parseInt(selectedTerm), academic_year: academicYear, marks: numVal, recorded_by: user.id };
-      if (existing) row.id = existing.id;
-      upserts.push(row);
+      upserts.push({ school_id: school.id, student_id: student.id, subject_id: selectedSubjectId, term: parseInt(selectedTerm), academic_year: academicYear, marks: numVal, recorded_by: user.id });
     }
 
     if (upserts.length === 0) {
