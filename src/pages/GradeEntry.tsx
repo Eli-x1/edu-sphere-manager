@@ -61,17 +61,12 @@ const GradeEntry = () => {
     }
     const loadClassSubjects = async () => {
       const { data } = await supabase
-        .from("class_subjects" as any)
+        .from("class_subjects")
         .select("subject_id")
         .eq("class_id", selectedClassId)
         .eq("school_id", school.id);
-      const subjectIds = ((data as any[]) ?? []).map((cs: any) => cs.subject_id);
-      if (subjectIds.length > 0) {
-        setSubjects(allSubjects.filter(s => subjectIds.includes(s.id)));
-      } else {
-        // Fallback: show all subjects if none assigned
-        setSubjects(allSubjects);
-      }
+      const subjectIds = (data ?? []).map((cs) => cs.subject_id);
+      setSubjects(allSubjects.filter(s => subjectIds.includes(s.id)));
       setSelectedSubjectId("");
     };
     loadClassSubjects();
