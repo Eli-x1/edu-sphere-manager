@@ -300,34 +300,41 @@ const Analytics = () => {
           {trendSubjects.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  Term-over-Term Trends
-                </CardTitle>
+                <CardTitle className="text-lg font-bold">Term-over-Term Trends</CardTitle>
+                <p className="text-sm text-muted-foreground">Subject averages across terms</p>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={termTrends} margin={{ left: 10, right: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="term" tick={{ fontSize: 12 }} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                  <AreaChart data={termTrends} margin={{ left: 0, right: 20, top: 10, bottom: 0 }}>
+                    <defs>
+                      {trendSubjects.map((subj, i) => (
+                        <linearGradient key={subj} id={`trend-${i}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={LINE_COLORS[i % LINE_COLORS.length]} stopOpacity={0.15} />
+                          <stop offset="95%" stopColor={LINE_COLORS[i % LINE_COLORS.length]} stopOpacity={0} />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis dataKey="term" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
                     <Tooltip
                       contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
                       formatter={(val: number) => [`${val}%`]}
                     />
                     <Legend />
                     {trendSubjects.map((subj, i) => (
-                      <Line
+                      <Area
                         key={subj}
                         type="monotone"
                         dataKey={subj}
                         stroke={LINE_COLORS[i % LINE_COLORS.length]}
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
+                        strokeWidth={2.5}
+                        fill={`url(#trend-${i})`}
+                        dot={{ r: 4, fill: "white", stroke: LINE_COLORS[i % LINE_COLORS.length], strokeWidth: 2 }}
                         connectNulls
                       />
                     ))}
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
